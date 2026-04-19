@@ -76,6 +76,8 @@ npm run comb
 > Folder: [`neo/`](./neo)
 
 An example **Aiken withdrawal validator** that verifies a claimed TWAP entirely on-chain, using COMB price UTxOs as reference inputs. No off-chain trust required.
+In our tests we were able to use 50 points feed to perform a TWAP over 16 hours and 40 minutes onchain paying just 1.19 ADA as fee
+[Transaction](https://preprod.cexplorer.io/tx/0a1c984782cf000adce16b0324a48e41f88c0e0f5e6f20f9b83aca560b161ce6?tab=inputs)
 
 ![comb oracle](https://github.com/elRaulito/COMB-oracle/blob/main/dashboard/reference_inputs_TWAP.png)
 
