@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comb Oracle Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <style>
+    body { background: #ffffff; font-family: 'Inter', system-ui, sans-serif; }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; }
+    .input-field {
+      background: #f9fafb; border: 1px solid #d1d5db; color: #111827;
+      border-radius: 0.5rem; padding: 0.5rem 0.75rem; width: 100%;
+      font-size: 0.875rem; outline: none; transition: border-color 0.15s;
+    }
+    .input-field:focus { border-color: #f97316; box-shadow: 0 0 0 2px rgba(249,115,22,0.1); }
+    select.input-field { appearance: auto; }
+    .btn-primary {
+      background: #f97316; color: white; padding: 0.55rem 1.4rem;
+      border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem;
+      cursor: pointer; border: none; transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #ea580c; }
+    .btn-primary:disabled { background: #d1d5db; cursor: not-allowed; color: #9ca3af; }
+    .tab {
+      cursor: pointer; padding: 0.35rem 0.85rem; border-radius: 0.4rem;
+      font-size: 0.8rem; color: #6b7280; transition: all 0.15s;
+      font-weight: 500;
+    }
+    .tab.active { background: #f97316; color: white; }
+    .tab:hover:not(.active) { background: #fff7ed; color: #ea580c; }
+    .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 0.75rem; padding: 1.25rem; }
+    .badge-tip { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; padding: 0.1rem 0.6rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+    .badge-used { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; padding: 0.1rem 0.6rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+    .spinner { border: 2px solid #fed7aa; border-top-color: #f97316; border-radius: 50%; width: 1rem; height: 1rem; animation: spin 0.8s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #f9fafb; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  </style>
+</head>
+<body class="min-h-screen text-gray-900">
+
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between border-b border-gray-100 pb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-lg font-bold" style="background:#f97316">⬡</div>
+      <div>
+        <h1 class="text-xl font-bold text-gray-900">Comb Oracle</h1>
+        <p class="text-xs text-gray-400">On-chain price history &amp; TWAP</p>
+      </div>
+    </div>
+    <div id="status-badge" class="hidden items-center gap-2 text-xs font-medium text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full">
+      <span class="w-2 h-2 bg-orange-500 rounded-full inline-block"></span>
+      <span id="status-text">Live</span>
+    </div>
+  </div>
+
+  <div id="error-msg" class="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2"></div>
+  <div id="loading-msg" class="flex items-center gap-2 text-sm text-gray-400">
+    <span class="spinner"></span> Loading price data…
+  </div>
+
+  <!-- Stats -->
+  <div id="stats-section" class="hidden">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="stat-card shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Total Points</p>
+        <p class="text-2xl font-bold text-gray-900" id="stat-total">—</p>
+        <p class="text-xs text-gray-400 mt-1" id="stat-tip-count">—</p>
+      </div>
+      <div class="stat-card shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Current Price</p>
+        <p class="text-2xl font-bold text-orange-500" id="stat-price">—</p>
+        <p class="text-xs text-gray-400 mt-1" id="stat-price-time">—</p>
+      </div>
+      <div class="stat-card shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">24h TWAP</p>
+        <p class="text-2xl font-bold text-orange-400" id="stat-twap-24h">—</p>
+        <p class="text-xs text-gray-400 mt-1" id="stat-twap-pts">—</p>
+      </div>
+      <div class="stat-card shadow-sm">
+        <p class="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-1">Data Span</p>
+        <p class="text-2xl font-bold text-gray-700" id="stat-span">—</p>
+        <p class="text-xs text-gray-400 mt-1" id="stat-oldest">—</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div id="chart-section" class="hidden card p-5 space-y-4 shadow-sm">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Price History</h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex bg-gray-100 rounded-lg p-1 gap-1">
+          <button class="tab active" id="range-all" onclick="setRange('all')">All</button>
+          <button class="tab" id="range-24h" onclick="setRange('24h')">24h</button>
+          <button class="tab" id="range-6h" onclick="setRange('6h')">6h</button>
+          <button class="tab" id="range-1h" onclick="setRange('1h')">1h</button>
+        </div>
+        <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+          <input type="checkbox" id="show-used" onchange="renderChart()" checked class="accent-orange-500" />
+          Show superseded
+        </label>
+      </div>
+    </div>
+    <div style="position:relative; height: 400px; background:#fff;">
+      <canvas id="price-chart"></canvas>
+    </div>
+    <div class="flex items-center gap-5 text-xs text-gray-400">
+      <span class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-full inline-block border-2 border-black" style="background:#f97316"></span>
+        Current tip
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-full inline-block border-2 border-gray-400" style="background:#fed7aa"></span>
+        Superseded
+      </span>
+      <span class="flex items-center gap-1.5">
+        <span class="w-3 h-3 rounded-full inline-block border-2 border-black" style="background:#1d4ed8"></span>
+        TWAP highlight
+      </span>
+    </div>
+  </div>
+
+  <!-- TWAP -->
+  <div id="twap-section" class="hidden card p-5 space-y-4 shadow-sm">
+    <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">TWAP Calculator</h2>
+    <div class="flex gap-1 border-b border-gray-100 pb-3">
+      <button class="tab active" id="twap-tab-simple" onclick="setTwapMode('simple')">Simple Range</button>
+      <button class="tab" id="twap-tab-granular" onclick="setTwapMode('granular')">Granular (neo.ak)</button>
+    </div>
+
+    <div id="twap-simple" class="space-y-3">
+      <p class="text-xs text-gray-400">Arithmetic mean of all price points within the selected time range.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1 font-medium">Start</label>
+          <input type="datetime-local" id="twap-start" class="input-field" />
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1 font-medium">End</label>
+          <input type="datetime-local" id="twap-end" class="input-field" />
+        </div>
+        <div class="flex items-end">
+          <button class="btn-primary w-full" onclick="computeSimpleTwap()">Compute TWAP</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="twap-granular" class="hidden space-y-3">
+      <p class="text-xs text-gray-400">Samples at fixed intervals from the newest point — matches on-chain neo.ak logic.</p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1 font-medium">Granularity</label>
+          <select id="twap-granularity" class="input-field">
+            <option value="1">1 interval (10 min)</option>
+            <option value="6">6 intervals (1 hour)</option>
+            <option value="12">12 intervals (2 hours)</option>
+            <option value="24">24 intervals (4 hours)</option>
+            <option value="144">144 intervals (24 hours)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1 font-medium">Point Count</label>
+          <input type="number" id="twap-count" class="input-field" value="6" min="2" max="100" />
+        </div>
+        <div class="flex items-end">
+          <button class="btn-primary w-full" onclick="computeGranularTwap()">Compute TWAP</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="twap-result" class="hidden bg-orange-50 border border-orange-100 rounded-xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-gray-500 font-medium">TWAP Result</span>
+        <span class="text-2xl font-bold text-orange-600" id="twap-value">—</span>
+      </div>
+      <div class="grid grid-cols-3 gap-4 text-xs">
+        <div><span class="text-gray-400">Points used</span><br/><span class="text-gray-900 font-semibold" id="twap-pts">—</span></div>
+        <div><span class="text-gray-400">Range start</span><br/><span class="text-gray-900 font-semibold" id="twap-from">—</span></div>
+        <div><span class="text-gray-400">Range end</span><br/><span class="text-gray-900 font-semibold" id="twap-to">—</span></div>
+      </div>
+      <div id="twap-points-list" class="space-y-0.5 max-h-36 overflow-y-auto text-xs"></div>
+    </div>
+    <div id="twap-error" class="hidden text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-2"></div>
+  </div>
+
+  <!-- Table -->
+  <div id="table-section" class="hidden card p-5 shadow-sm space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Price Points</h2>
+      <span class="text-xs text-gray-400">Newest first · max 100 rows</span>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-xs text-gray-400 uppercase border-b border-gray-100">
+            <th class="text-left pb-2 pr-6">Time</th>
+            <th class="text-right pb-2 pr-6">Price</th>
+            <th class="text-right pb-2 pr-6">Raw value</th>
+            <th class="text-left pb-2 pr-6">Status</th>
+            <th class="text-left pb-2">Tx Hash</th>
+          </tr>
+        </thead>
+        <tbody id="price-table" class="divide-y divide-gray-50"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── CBOR Decoder ──────────────────────────────────────────────────────────────
+
+class CBORDecoder {
+  constructor(hex) {
+    this.b = new Uint8Array(hex.match(/.{2}/g).map(h => parseInt(h, 16)));
+    this.i = 0;
+  }
+  byte() { return this.b[this.i++]; }
+  uint(n) {
+    let v = 0n;
+    for (let j = 0; j < n; j++) v = (v << 8n) | BigInt(this.b[this.i++]);
+    return v;
+  }
+  head(info) {
+    if (info < 24)   return [BigInt(info), false];
+    if (info === 24) return [BigInt(this.byte()), false];
+    if (info === 25) return [this.uint(2), false];
+    if (info === 26) return [this.uint(4), false];
+    if (info === 27) return [this.uint(8), false];
+    if (info === 31) return [null, true];
+    throw new Error('unsupported CBOR info: ' + info);
+  }
+  read() {
+    const b = this.byte();
+    const major = b >> 5, info = b & 0x1f;
+    if (major === 0) { const [n] = this.head(info); return n; }
+    if (major === 1) { const [n] = this.head(info); return -1n - n; }
+    if (major === 2) {
+      const [len] = this.head(info);
+      const sl = this.b.slice(this.i, this.i + Number(len));
+      this.i += Number(len); return { bytes: sl };
+    }
+    if (major === 3) {
+      const [len] = this.head(info);
+      const sl = this.b.slice(this.i, this.i + Number(len));
+      this.i += Number(len); return { text: new TextDecoder().decode(sl) };
+    }
+    if (major === 4) {
+      const [len, indef] = this.head(info);
+      const items = [];
+      if (indef) { while (this.b[this.i] !== 0xff) items.push(this.read()); this.i++; }
+      else { for (let j = 0; j < Number(len); j++) items.push(this.read()); }
+      return items;
+    }
+    if (major === 5) {
+      const [len, indef] = this.head(info);
+      const entries = [];
+      if (indef) { while (this.b[this.i] !== 0xff) { entries.push([this.read(), this.read()]); } this.i++; }
+      else { for (let j = 0; j < Number(len); j++) entries.push([this.read(), this.read()]); }
+      return { map: entries };
+    }
+    if (major === 6) {
+      const [tag] = this.head(info);
+      const value = this.read();
+      const t = Number(tag);
+      if (t >= 121 && t <= 127) return { constr: t - 121, fields: value };
+      if (t === 102) return { constr: Number(value[0]), fields: value[1] };
+      return { tag: t, value };
+    }
+    if (major === 7) {
+      if (info === 20) return false; if (info === 21) return true;
+      if (info === 22) return null;  if (info === 31) return undefined;
+    }
+    return null;
+  }
+}
+
+function decodeCombDatum(hex) {
+  const dec = new CBORDecoder(hex);
+  const datum = dec.read();
+  if (!datum || datum.constr !== 0 || !Array.isArray(datum.fields) || datum.fields.length < 3)
+    throw new Error('Invalid CombDatum');
+  const [usedField, price, time] = datum.fields;
+  return { used: usedField?.constr === 1, price: BigInt(price), time: Number(time) };
+}
+
+// ── State & Config ────────────────────────────────────────────────────────────
+
+let allNodes = [];
+let chart = null;
+let chartRange = 'all';
+let twapMode = 'simple';
+let twapHighlight = [];
+
+const DEFAULTS = {
+  apiKey:        '',   // set your Blockfrost preprod API key here
+  scriptAddress: 'addr_test1wrnzg2pmuymrskpl2cwgelhhnlkk7dl0lnstwllf2ueetyca87lpg',
+  policyId:      'e624283be13638583f561c8cfef79fed6f37effce0b77fe957339593',
+};
+
+// ── Lollipop plugin ───────────────────────────────────────────────────────────
+
+const lollipopPlugin = {
+  id: 'lollipop',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    const yScale = chart.scales.y;
+    const bottom = yScale.getPixelForValue(yScale.min);
+
+    chart.data.datasets.forEach((dataset, di) => {
+      const meta = chart.getDatasetMeta(di);
+      if (meta.hidden) return;
+      meta.data.forEach(point => {
+        if (point.y >= bottom) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]);
+        ctx.moveTo(point.x, point.y + (dataset.pointRadius || 6));
+        ctx.lineTo(point.x, bottom);
+        ctx.stroke();
+        ctx.restore();
+      });
+    });
+  },
+};
+
+Chart.register(lollipopPlugin);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+
+window.onload = () => {
+  const now = new Date();
+  document.getElementById('twap-end').value   = toDatetimeLocal(now);
+  document.getElementById('twap-start').value = toDatetimeLocal(new Date(now - 86400_000));
+  loadData();
+};
+
+function toDatetimeLocal(d) {
+  return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+// ── Fetch ─────────────────────────────────────────────────────────────────────
+
+async function loadData() {
+  hideError();
+  document.getElementById('loading-msg').classList.remove('hidden');
+  try {
+    const base = 'https://cardano-preprod.blockfrost.io/api/v0';
+    const utxos = await fetchAllUTxOs(DEFAULTS.apiKey, base, DEFAULTS.scriptAddress);
+    const priceDiv = 1_000_000;
+    allNodes = parseNodes(utxos, DEFAULTS.policyId, priceDiv);
+    if (!allNodes.length) { showError('No comb price points found at script address.'); return; }
+    renderStats(); renderChart(); renderTable();
+    ['stats-section','chart-section','twap-section','table-section'].forEach(id => show(id));
+    show('status-badge');
+    document.getElementById('status-text').textContent = `${allNodes.length} points loaded`;
+    const newest = allNodes[allNodes.length - 1], oldest = allNodes[0];
+    document.getElementById('twap-end').value   = toDatetimeLocal(new Date(newest.time));
+    document.getElementById('twap-start').value = toDatetimeLocal(new Date(Math.max(oldest.time, newest.time - 86400_000)));
+  } catch (e) { showError(`Error: ${e.message}`); console.error(e); }
+  document.getElementById('loading-msg').classList.add('hidden');
+}
+
+async function fetchAllUTxOs(apiKey, base, address) {
+  const all = []; let page = 1;
+  while (true) {
+    const r = await fetch(`${base}/addresses/${address}/utxos?page=${page}&count=100&order=asc`, { headers: { project_id: apiKey } });
+    if (r.status === 404) break;
+    if (r.status === 403) throw new Error('Invalid API key');
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.message || `Blockfrost ${r.status}`); }
+    const data = await r.json();
+    if (!data.length) break;
+    all.push(...data);
+    if (data.length < 100) break;
+    page++;
+  }
+  return all;
+}
+
+function isCombUnit(unit, policyId) {
+  return unit.startsWith(policyId) && unit.length === policyId.length + 16;
+}
+
+function parseNodes(utxos, policyId, priceDiv) {
+  const nodes = [];
+  for (const u of utxos) {
+    if (!(u.amount || []).some(a => isCombUnit(a.unit, policyId))) continue;
+    if (!u.inline_datum) continue;
+    try {
+      const d = decodeCombDatum(u.inline_datum);
+      nodes.push({ txHash: u.tx_hash, outputIndex: u.output_index, used: d.used, price: d.price, priceDisplay: Number(d.price) / priceDiv, time: d.time });
+    } catch (e) { console.warn('Datum decode failed', u.tx_hash, e.message); }
+  }
+  return nodes.sort((a, b) => a.time - b.time);
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+function renderStats() {
+  const label = 'USD';
+
+  const tips = allNodes.filter(n => !n.used);
+  const newest = allNodes[allNodes.length - 1], oldest = allNodes[0];
+  document.getElementById('stat-total').textContent = allNodes.length;
+  document.getElementById('stat-tip-count').textContent = `${tips.length} tip · ${allNodes.length - tips.length} superseded`;
+  document.getElementById('stat-price').textContent = `${newest.priceDisplay.toFixed(4)} ${label}`;
+  document.getElementById('stat-price-time').textContent = formatTime(newest.time);
+  const last24h = allNodes.filter(n => n.time >= Date.now() - 86400_000);
+  if (last24h.length) {
+    const twap24h = last24h.reduce((s, n) => s + n.priceDisplay, 0) / last24h.length;
+    document.getElementById('stat-twap-24h').textContent = `${twap24h.toFixed(4)} ${label}`;
+    document.getElementById('stat-twap-pts').textContent = `${last24h.length} pts`;
+  } else {
+    document.getElementById('stat-twap-24h').textContent = 'N/A';
+    document.getElementById('stat-twap-pts').textContent = 'No 24h data';
+  }
+  const spanH = (newest.time - oldest.time) / 3600_000;
+  document.getElementById('stat-span').textContent = spanH >= 24 ? `${(spanH / 24).toFixed(1)}d` : `${spanH.toFixed(1)}h`;
+  document.getElementById('stat-oldest').textContent = `from ${formatTime(oldest.time)}`;
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+
+function setRange(r) {
+  chartRange = r;
+  ['all','24h','6h','1h'].forEach(x => document.getElementById(`range-${x}`).classList.toggle('active', x === r));
+  renderChart();
+}
+
+function getFilteredNodes() {
+  const showUsed = document.getElementById('show-used').checked;
+  const now = Date.now();
+  const cutoff = { all: 0, '24h': now - 86400_000, '6h': now - 6*3600_000, '1h': now - 3600_000 }[chartRange];
+  let nodes = allNodes.filter(n => n.time >= cutoff);
+  if (!showUsed) nodes = nodes.filter(n => !n.used);
+  return nodes;
+}
+
+function renderChart() {
+  if (!allNodes.length) return;
+  const label = 'USD';
+  const nodes = getFilteredNodes();
+  const tips = nodes.filter(n => !n.used);
+  const used = nodes.filter(n => n.used);
+  const toPoint = n => ({ x: n.time, y: n.priceDisplay, node: n });
+
+  const datasets = [];
+
+  if (used.length) {
+    datasets.push({
+      label: 'Superseded (used)',
+      data: used.map(toPoint),
+      backgroundColor: '#fed7aa',
+      borderColor: '#9ca3af',
+      borderWidth: 1.5,
+      pointRadius: 7,
+      pointHoverRadius: 9,
+      showLine: false,
+      order: 3,
+    });
+  }
+
+  datasets.push({
+    label: 'Current tip',
+    data: tips.map(toPoint),
+    backgroundColor: '#f97316',
+    borderColor: '#000000',
+    borderWidth: 1.5,
+    pointRadius: 8,
+    pointHoverRadius: 10,
+    showLine: false,
+    order: 2,
+  });
+
+  if (twapHighlight.length) {
+    datasets.push({
+      label: 'TWAP points',
+      data: twapHighlight.map(toPoint),
+      backgroundColor: '#1d4ed8',
+      borderColor: '#000000',
+      borderWidth: 1.5,
+      pointRadius: 9,
+      pointHoverRadius: 11,
+      showLine: false,
+      order: 1,
+    });
+  }
+
+  if (chart) chart.destroy();
+  const ctx = document.getElementById('price-chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 200 },
+      plugins: {
+        legend: { labels: { color: '#6b7280', font: { size: 11 }, boxWidth: 10 } },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#111827',
+          bodyColor: '#6b7280',
+          borderColor: '#e5e7eb',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            title: items => formatTime(items[0].raw.x),
+            label: item => {
+              const n = item.raw.node;
+              return [`Price: ${item.raw.y.toFixed(6)} ${label}`, `Raw: ${n.price}`, `Status: ${n.used ? 'superseded' : 'tip'}`, `Tx: ${n.txHash.slice(0,14)}…`];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'time',
+          time: { tooltipFormat: 'HH:mm MMM d', displayFormats: { minute: 'HH:mm', hour: 'HH:mm', day: 'MMM d' } },
+          grid: { color: '#f3f4f6' },
+          ticks: { color: '#9ca3af', maxTicksLimit: 8 },
+        },
+        y: {
+          grid: { color: '#f3f4f6' },
+          ticks: { color: '#9ca3af', callback: v => `${v.toFixed(4)} ${label}` },
+          title: { display: true, text: `Price (${label})`, color: '#9ca3af', font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+// ── TWAP ──────────────────────────────────────────────────────────────────────
+
+function setTwapMode(mode) {
+  twapMode = mode;
+  document.getElementById('twap-tab-simple').classList.toggle('active', mode === 'simple');
+  document.getElementById('twap-tab-granular').classList.toggle('active', mode === 'granular');
+  show('twap-simple', mode === 'simple');
+  show('twap-granular', mode === 'granular');
+  hide('twap-result'); hide('twap-error');
+}
+
+function computeSimpleTwap() {
+  hide('twap-error');
+  const start = new Date(document.getElementById('twap-start').value).getTime();
+  const end   = new Date(document.getElementById('twap-end').value).getTime();
+  if (!start || !end || start >= end) { showTwapError('Invalid date range.'); return; }
+  const pts = allNodes.filter(n => n.time >= start && n.time <= end);
+  if (!pts.length) { showTwapError('No price points in selected range.'); return; }
+  const mean = pts.reduce((s, n) => s + n.priceDisplay, 0) / pts.length;
+  showTwapResult(mean, pts, pts[0].time, pts[pts.length - 1].time);
+  twapHighlight = pts; renderChart();
+}
+
+function computeGranularTwap() {
+  hide('twap-error');
+  const interval = allNodes.length >= 2 ? allNodes[1].time - allNodes[0].time : 600_000;
+  const gran  = Number(document.getElementById('twap-granularity').value) * interval;
+  const count = Number(document.getElementById('twap-count').value);
+  if (count < 2) { showTwapError('Count must be ≥ 2.'); return; }
+  const byTime = new Map(allNodes.map(n => [n.time, n]));
+  const newest = allNodes[allNodes.length - 1];
+  if (!newest) { showTwapError('No data loaded.'); return; }
+  const selected = [], missing = [];
+  for (let i = 0; i < count; i++) {
+    const t = newest.time - i * gran;
+    const node = byTime.get(t);
+    if (node) selected.push(node);
+    else missing.push(new Date(t).toLocaleString());
+  }
+  if (missing.length) {
+    showTwapError(`Missing points at: ${missing.slice(0,3).join(', ')}${missing.length > 3 ? ` (+${missing.length-3} more)` : ''}`);
+    return;
+  }
+  const mean = selected.reduce((s, n) => s + n.priceDisplay, 0) / count;
+  showTwapResult(mean, selected, selected[selected.length - 1].time, selected[0].time);
+  twapHighlight = selected; renderChart();
+}
+
+function showTwapResult(mean, pts, startMs, endMs) {
+  const label = 'USD';
+  document.getElementById('twap-value').textContent = `${mean.toFixed(6)} ${label}`;
+  document.getElementById('twap-pts').textContent  = pts.length;
+  document.getElementById('twap-from').textContent = formatTime(startMs);
+  document.getElementById('twap-to').textContent   = formatTime(endMs);
+  document.getElementById('twap-points-list').innerHTML = pts.map(n =>
+    `<div class="flex justify-between text-gray-500 py-1 border-b border-orange-100">
+      <span>${formatTime(n.time)}</span>
+      <span class="font-semibold text-gray-800">${n.priceDisplay.toFixed(6)} ${label}</span>
+    </div>`
+  ).join('');
+  show('twap-result');
+}
+
+function showTwapError(msg) {
+  const el = document.getElementById('twap-error');
+  el.textContent = msg; el.classList.remove('hidden');
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
+function renderTable() {
+  const label = 'USD';
+  document.getElementById('price-table').innerHTML = [...allNodes].reverse().slice(0, 100).map(n => `
+    <tr class="hover:bg-orange-50 transition-colors">
+      <td class="py-2 pr-6 text-gray-500 text-xs whitespace-nowrap">${formatTime(n.time)}</td>
+      <td class="py-2 pr-6 text-right font-semibold ${n.used ? 'text-gray-400' : 'text-orange-500'}">${n.priceDisplay.toFixed(6)} ${label}</td>
+      <td class="py-2 pr-6 text-right text-gray-400 font-mono text-xs">${n.price.toString()}</td>
+      <td class="py-2 pr-6">${n.used ? '<span class="badge-used">superseded</span>' : '<span class="badge-tip">tip</span>'}</td>
+      <td class="py-2 text-gray-400 font-mono text-xs">${n.txHash.slice(0,16)}…#${n.outputIndex}</td>
+    </tr>`).join('');
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatTime(ms) {
+  return new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function show(id, cond = true) { document.getElementById(id).classList.toggle('hidden', !cond); }
+function hide(id) { document.getElementById(id).classList.add('hidden'); }
+function showError(msg) { const el = document.getElementById('error-msg'); el.textContent = msg; el.classList.remove('hidden'); }
+function hideError() { document.getElementById('error-msg').classList.add('hidden'); }
+</script>
+</body>
+</html>

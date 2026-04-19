@@ -1,0 +1,26 @@
+{
+  "name": "gunblade",
+  "version": "1.0.0",
+  "description": "MeshJS SDK for interacting with the Charli3 pull oracle on Cardano",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "agg": "ts-node src/agg.ts",
+    "addresses": "ts-node src/addresses.ts"
+  },
+  "dependencies": {
+    "@meshsdk/core": "^1.7.4",
+    "axios": "^1.6.0",
+    "blakejs": "^1.2.1",
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

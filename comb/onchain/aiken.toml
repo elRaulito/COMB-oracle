@@ -1,0 +1,9 @@
+name = "comb/comb_oracle"
+version = "1.0.0"
+licence = "MIT"
+description = "COMB Oracle — TWAP price accumulator built on Charli3 pull oracle"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "2.2.0"
+source = "github"

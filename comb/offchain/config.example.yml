@@ -1,0 +1,43 @@
+network:
+  network: testnet   # or "mainnet"
+
+wallet:
+  mnemonic: >-
+    word1 word2 word3 word4 word5 word6 word7 word8 word9 word10
+    word11 word12 word13 word14 word15 word16 word17 word18 word19
+    word20 word21 word22 word23 word24
+
+# Optional: separate wallet for the comb publisher process
+# comb_wallet:
+#   mnemonic: >-
+#     word1 word2 ... word24
+
+# Charli3 oracle contract details (get from Charli3 docs for your feed)
+oracle_address: addr_test1...
+policy_id: <charli3_oracle_policy_id_hex>
+odv_validity_length: 300000
+
+reference_script:
+  address: addr_test1...
+  utxo_reference:
+    transaction_id: <reference_script_tx_hash>
+    output_index: 0
+
+nodes:
+  - root_url: http://<node1_ip>:<port>
+    pub_key: 5820<node1_verification_key_hex>
+  - root_url: http://<node2_ip>:<port>
+    pub_key: 5820<node2_verification_key_hex>
+
+comb_oracle:
+  oracle_policy_id: <charli3_oracle_policy_id_hex>
+  agg_state_token_name: '43334153'   # hex for "C3AS"
+  min_interval: 600000               # 10 minutes in ms
+  # Fields below are populated automatically by "npm run deploy":
+  policy_id: ''
+  script_address: ''
+  oracle_script_cbor: ''
+  neo_script_cbor: ''
+  seed_utxo:
+    tx_hash: ''
+    output_index: 0

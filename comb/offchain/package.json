@@ -1,0 +1,25 @@
+{
+  "name": "comb-oracle-offchain",
+  "version": "1.0.0",
+  "description": "COMB Oracle offchain: deploys, initialises, and maintains the price chain",
+  "scripts": {
+    "build": "tsc",
+    "deploy": "ts-node src/deploy.ts",
+    "init": "ts-node src/init.ts",
+    "comb": "ts-node src/comb.ts",
+    "addresses": "ts-node src/addresses.ts"
+  },
+  "dependencies": {
+    "@meshsdk/core": "^1.7.4",
+    "dotenv": "^17.4.2",
+    "js-yaml": "^4.1.0",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.0.0",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
