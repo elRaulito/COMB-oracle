@@ -77,6 +77,9 @@ npm run comb
 
 An example **Aiken withdrawal validator** that verifies a claimed TWAP entirely on-chain, using COMB price UTxOs as reference inputs. No off-chain trust required.
 
+![comb oracle](https://github.com/elRaulito/COMB-oracle/blob/main/dashboard/reference_inputs_TWAP.png)
+
+
 - Accepts a `NeoRedeemer` specifying which price points to sample and the claimed mean
 - Verifies timestamps form an arithmetic sequence (evenly spaced, configurable granularity)
 - Verifies `claimed_mean == floor(sum(prices) / count)`
