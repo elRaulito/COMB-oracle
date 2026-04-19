@@ -4,6 +4,8 @@
 
 COMB Oracle is a suite of open-source tools for building **Time-Weighted Average Price (TWAP)** feeds on Cardano, powered by [Charli3](https://charli3.io) pull oracle data. Every 10 minutes a new price point is anchored on-chain in a UTxO; any contract that needs a TWAP can consume those UTxOs as reference inputs — no trusted intermediary, fully verifiable on-chain.
 
+![comb oracle](https://github.com/elRaulito/COMB-oracle/blob/main/dashboard/comb_oracle.png)
+
 ---
 
 ## Architecture overview
